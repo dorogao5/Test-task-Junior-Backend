@@ -52,8 +52,9 @@ local_settings.py
 *.key
 *.crt
 
-# Lock files
+# Lock files (keep uv.lock for reproducible builds)
 *.lock
+!uv.lock
 
 # Editor and IDE files
 .vscode/

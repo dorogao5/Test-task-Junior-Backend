@@ -10,6 +10,7 @@
 - Python 3.13
 - Django 5.2
 - djangorestframework 3.16
+- gunicorn 23.0
 - psycopg[binary] 3.2.13
 - httpx 0.28
 - python-decouple 3.8

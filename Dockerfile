@@ -9,11 +9,11 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml /app/pyproject.toml
+COPY pyproject.toml uv.lock /app/
 RUN uv sync
 
 COPY . /app
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["sh", "/app/entrypoint.sh"]
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

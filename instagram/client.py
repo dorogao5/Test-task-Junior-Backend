@@ -1,7 +1,12 @@
-from typing import Any
+from __future__ import annotations
+
+import logging
+from typing import Any, Self
 
 import httpx
 from decouple import config
+
+logger = logging.getLogger(__name__)
 
 
 class InstagramAPIError(Exception):
@@ -18,15 +23,29 @@ class InstagramClient:
         user_id: str | None = None,
         base_url: str | None = None,
     ) -> None:
-        self.access_token = access_token or config("INSTAGRAM_ACCESS_TOKEN", default="")
-        self.user_id = user_id or config("INSTAGRAM_USER_ID", default="")
+        self.access_token = access_token or config("INSTAGRAM_ACCESS_TOKEN")
+        self.user_id = user_id or config("INSTAGRAM_USER_ID")
         self.base_url = base_url or config("INSTAGRAM_BASE_URL")
         self._client = httpx.Client(base_url=self.base_url, timeout=15.0)
+
+    def close(self) -> None:
+        self._client.close()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
 
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         response = self._client.request(method, url, **kwargs)
         if response.is_error:
-            raise InstagramAPIError(self._extract_error_message(response), response.status_code)
+            message = self._extract_error_message(response)
+            logger.error(
+                "Instagram API error: %s %s -> %d %s",
+                method, url, response.status_code, message,
+            )
+            raise InstagramAPIError(message, response.status_code)
         return response
 
     @staticmethod
@@ -62,19 +81,23 @@ class InstagramClient:
             response = self._request("GET", url, params=params)
             payload = response.json()
 
-            if isinstance(payload, dict):
-                data = payload.get("data", [])
-                if isinstance(data, list):
-                    media_items.extend(item for item in data if isinstance(item, dict))
+            if not isinstance(payload, dict):
+                break
 
-                paging = payload.get("paging")
-                next_url = paging.get("next") if isinstance(paging, dict) else None
-                if isinstance(next_url, str) and next_url:
-                    url = next_url
-                    params = None
-                    continue
+            data = payload.get("data", [])
+            if isinstance(data, list):
+                media_items.extend(item for item in data if isinstance(item, dict))
 
-            break
+            paging = payload.get("paging")
+            next_url = paging.get("next") if isinstance(paging, dict) else None
+
+            if not isinstance(next_url, str) or not next_url:
+                break
+
+            # next_url is an absolute URL; httpx.Client uses it as-is,
+            # overriding base_url. Params are already embedded in the URL.
+            url = next_url
+            params = None
 
         return media_items
 

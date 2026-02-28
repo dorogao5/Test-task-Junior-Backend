@@ -1,6 +1,6 @@
 from typing import Any
 
-from rest_framework import generics, serializers, status
+from rest_framework import generics, status
 from rest_framework.pagination import CursorPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from .client import InstagramAPIError
 from .models import Post
-from .serializers import CommentSerializer, PostSerializer
+from .serializers import CommentCreateInputSerializer, CommentSerializer, PostSerializer
 from . import services
 
 
@@ -17,13 +17,12 @@ class PostCursorPagination(CursorPagination):
     ordering = "-timestamp"
 
 
-class CommentCreateInputSerializer(serializers.Serializer):
-    text = serializers.CharField()
-
-
 class SyncView(APIView):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        result = services.sync_posts()
+        try:
+            result = services.sync_posts()
+        except InstagramAPIError as exc:
+            return Response({"error": exc.message}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(result, status=status.HTTP_200_OK)
 
 
