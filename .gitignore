@@ -52,7 +52,7 @@ local_settings.py
 *.key
 *.crt
 
-# Lock files (keep uv.lock for reproducible builds)
+# Lock files 
 *.lock
 !uv.lock
 

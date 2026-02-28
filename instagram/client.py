@@ -94,8 +94,7 @@ class InstagramClient:
             if not isinstance(next_url, str) or not next_url:
                 break
 
-            # next_url is an absolute URL; httpx.Client uses it as-is,
-            # overriding base_url. Params are already embedded in the URL.
+
             url = next_url
             params = None
 
